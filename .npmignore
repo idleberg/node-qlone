@@ -1,0 +1,6 @@
+.circleci/
+.editorconfig
+.travis.yml
+gulpfile.json
+tsconfig.json
+tslint.json

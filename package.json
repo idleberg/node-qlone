@@ -1,0 +1,38 @@
+{
+  "name": "qlone",
+  "version": "0.0.0",
+  "description": "CLI tool to clone repositories, install dependencies and run scripts. All in one command.",
+  "license": "MIT",
+  "main": "index.js",
+  "bin": {
+    "qlone": "./index.js"
+  },
+  "scripts": {
+    "build": "tsc --project ./",
+    "lint": "tslint --project ./",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jan T. Sott",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/idleberg/node-qlone.git"
+  },
+  "keywords": [
+    "git clone",
+    "install dependencies"
+  ],
+  "types": "./types",
+  "dependencies": {
+    "commander": "^2.15.1",
+    "execa": "^0.10.0",
+    "listr": "^0.14.1",
+    "rimraf": "^2.6.2",
+    "update-notifier": "^2.5.0",
+    "util": "^0.10.3"
+  },
+  "devDependencies": {
+    "@types/node": "^10.1.4",
+    "tslint": "^5.10.0",
+    "typescript": "^2.8.3"
+  }
+}
