@@ -2,18 +2,30 @@ const execa = require('execa');
 const Listr = require('listr');
 const process = require('process');
 const rimraf = require('rimraf');
+const split = require('split');
+const streamToObservable = require('@samverschueren/stream-to-observable');
 const { basename, join } = require('path');
 const { exists } = require('fs');
+const { catchError, filter } = require('rxjs/operators');
+const { merge, throwError } = require('rxjs');
 const { promisify } = require('util');
-
-const cloneArgs = ['clone'];
 
 const existsAsync = promisify(exists);
 const rimrafAsync = promisify(rimraf);
 
+const exec = (cmd, args = [], opts = {}) => {
+    const cp = execa(cmd, args, opts);
+
+    return merge(
+        streamToObservable(cp.stdout.pipe(split()), {await: cp}),
+        streamToObservable(cp.stderr.pipe(split()), {await: cp})
+    ).pipe(filter(Boolean));
+};
+
 const runTask = program => {
     let task, tasks;
     let repository = program.args[0];
+    const cloneArgs = ['clone'];
 
     cloneArgs.push(isRepository(repository));
 
@@ -30,11 +42,11 @@ const runTask = program => {
         {
             title: 'Cloning repository',
             task: () =>
-                execa('git', cloneArgs).catch(error => {
-                    if (error !== '') {
-                        throw new Error(error);
-                    }
-                })
+                exec('git', cloneArgs).pipe(
+                    catchError(err => {
+                        throwError(err);
+                    })
+                )
         }
     ];
 
@@ -56,11 +68,11 @@ const runTask = program => {
         const fetchTask: ListrOptions = {
             title: 'Fetching refs',
             task: () =>
-                execa('git', ['fetch'], { cwd: dirName }).catch(error => {
-                    if (error !== '') {
-                        throw new Error(error);
-                    }
-                })
+                exec('git', ['fetch'], { cwd: dirName }).pipe(
+                    catchError(err => {
+                        throwError(err);
+                    })
+                )
         };
 
         defaultTasks.push(fetchTask);
@@ -143,9 +155,11 @@ const runTask = program => {
                                 {
                                     title: 'Installing',
                                     task: () =>
-                                        execa('git', ['submodule', 'update', '--init', '--recursive'], { cwd: dirName }).catch(() => {
-                                            task.skip('Bower is not installed, install it via `npm install -g bower`');
-                                        })
+                                        exec('git', ['submodule', 'update', '--init', '--recursive'], { cwd: dirName }).pipe(
+                                            catchError(err => {
+                                                throwError(err);
+                                            })
+                                        )
                                 }
                             ]);
                         }
@@ -159,16 +173,21 @@ const runTask = program => {
                                     title: 'Installing with Yarn',
                                     enabled: ctx => ctx.npm === true,
                                     task: (ctx, task) =>
-                                        execa('yarn', { cwd: dirName }).catch(() => {
-                                            ctx.yarn = false;
-
-                                            task.skip('Yarn not available, install it via `npm install -g yarn`');
-                                        })
+                                        exec('yarn', [], { cwd: dirName }).pipe(
+                                            catchError(err => {
+                                                throwError(err);
+                                            })
+                                        )
                                 },
                                 {
                                     title: 'Installing with npm',
                                     enabled: ctx => ctx.npm === true && ctx.yarn === false,
-                                    task: () => execa('npm', ['install'], { cwd: dirName })
+                                    task: () =>
+                                        exec('npm', ['install'], { cwd: dirName }).pipe(
+                                            catchError(err => {
+                                                throwError(err);
+                                            })
+                                        )
                                 }
                             ]);
                         }
@@ -181,9 +200,11 @@ const runTask = program => {
                                 {
                                     title: 'Installing',
                                     task: () =>
-                                        execa('bower', ['install'], { cwd: dirName }).catch(() => {
-                                            task.skip('Bower is not installed, install it via `npm install -g bower`');
-                                        })
+                                        exec('bower', ['install'], { cwd: dirName }).pipe(
+                                            catchError(err => {
+                                                throwError(err);
+                                            })
+                                        )
                                 }
                             ]);
                         }
@@ -195,7 +216,12 @@ const runTask = program => {
                             return new Listr([
                                 {
                                     title: 'Installing',
-                                    task: () => execa('composer', ['install'], { cwd: dirName })
+                                    task: () =>
+                                        exec('composer', ['install'], { cwd: dirName }).pipe(
+                                            catchError(err => {
+                                                throwError(err);
+                                            })
+                                        )
                                 }
                             ]);
                         }
@@ -207,7 +233,12 @@ const runTask = program => {
                             return new Listr([
                                 {
                                     title: 'Installing',
-                                    task: () => execa('bundler', ['install'], { cwd: dirName })
+                                    task: () =>
+                                        exec('bundler', ['install'], { cwd: dirName }).pipe(
+                                            catchError(err => {
+                                                throwError(err);
+                                            })
+                                        )
                                 }
                             ]);
                         }
@@ -228,12 +259,22 @@ const runTask = program => {
                     {
                         title: 'yarn test',
                         enabled: ctx => ctx.yarn !== false,
-                        task: () => execa('yarn', ['test'], { cwd: dirName })
+                        task: () =>
+                            exec('yarn', ['test'], { cwd: dirName }).pipe(
+                                catchError(err => {
+                                    throwError(err);
+                                })
+                            )
                     },
                     {
                         title: 'npm test',
                         enabled: ctx => ctx.yarn === false,
-                        task: () => execa('npm', ['test'], { cwd: dirName })
+                        task: () =>
+                            exec('npm', ['test'], { cwd: dirName }).pipe(
+                                catchError(err => {
+                                    throwError(err);
+                                })
+                            )
                     }
                 ]);
             }
@@ -251,12 +292,22 @@ const runTask = program => {
                     {
                         title: 'yarn start',
                         enabled: ctx => ctx.yarn !== false,
-                        task: () => execa('yarn', ['start'], { cwd: dirName })
+                        task: () =>
+                            exec('yarn', ['start'], { cwd: dirName }).pipe(
+                                catchError(err => {
+                                    throwError(err);
+                                })
+                            )
                     },
                     {
                         title: 'npm start',
                         enabled: ctx => ctx.yarn === false,
-                        task: () => execa('npm', ['start'], { cwd: dirName })
+                        task: () =>
+                            exec('npm', ['start'], { cwd: dirName }).pipe(
+                                catchError(err => {
+                                    throwError(err);
+                                })
+                            )
                     }
                 ]);
             }

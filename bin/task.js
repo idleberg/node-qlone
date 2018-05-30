@@ -4,15 +4,25 @@ var execa = require('execa');
 var Listr = require('listr');
 var process = require('process');
 var rimraf = require('rimraf');
+var split = require('split');
+var streamToObservable = require('@samverschueren/stream-to-observable');
 var _a = require('path'), basename = _a.basename, join = _a.join;
 var exists = require('fs').exists;
+var _b = require('rxjs/operators'), catchError = _b.catchError, filter = _b.filter;
+var _c = require('rxjs'), merge = _c.merge, throwError = _c.throwError;
 var promisify = require('util').promisify;
-var cloneArgs = ['clone'];
 var existsAsync = promisify(exists);
 var rimrafAsync = promisify(rimraf);
+var exec = function (cmd, args, opts) {
+    if (args === void 0) { args = []; }
+    if (opts === void 0) { opts = {}; }
+    var cp = execa(cmd, args, opts);
+    return merge(streamToObservable(cp.stdout.pipe(split()), { await: cp }), streamToObservable(cp.stderr.pipe(split()), { await: cp })).pipe(filter(Boolean));
+};
 var runTask = function (program) {
     var task, tasks;
     var repository = program.args[0];
+    var cloneArgs = ['clone'];
     cloneArgs.push(isRepository(repository));
     if (is(program.branch)) {
         cloneArgs.push('--branch', program.branch);
@@ -27,11 +37,9 @@ var runTask = function (program) {
         {
             title: 'Cloning repository',
             task: function () {
-                return execa('git', cloneArgs).catch(function (error) {
-                    if (error !== '') {
-                        throw new Error(error);
-                    }
-                });
+                return exec('git', cloneArgs).pipe(catchError(function (err) {
+                    throwError(err);
+                }));
             }
         }
     ];
@@ -52,11 +60,9 @@ var runTask = function (program) {
         var fetchTask = {
             title: 'Fetching refs',
             task: function () {
-                return execa('git', ['fetch'], { cwd: dirName }).catch(function (error) {
-                    if (error !== '') {
-                        throw new Error(error);
-                    }
-                });
+                return exec('git', ['fetch'], { cwd: dirName }).pipe(catchError(function (err) {
+                    throwError(err);
+                }));
             }
         };
         defaultTasks.push(fetchTask);
@@ -137,9 +143,9 @@ var runTask = function (program) {
                                 {
                                     title: 'Installing',
                                     task: function () {
-                                        return execa('git', ['submodule', 'update', '--init', '--recursive'], { cwd: dirName }).catch(function () {
-                                            task.skip('Bower is not installed, install it via `npm install -g bower`');
-                                        });
+                                        return exec('git', ['submodule', 'update', '--init', '--recursive'], { cwd: dirName }).pipe(catchError(function (err) {
+                                            throwError(err);
+                                        }));
                                     }
                                 }
                             ]);
@@ -154,16 +160,19 @@ var runTask = function (program) {
                                     title: 'Installing with Yarn',
                                     enabled: function (ctx) { return ctx.npm === true; },
                                     task: function (ctx, task) {
-                                        return execa('yarn', { cwd: dirName }).catch(function () {
-                                            ctx.yarn = false;
-                                            task.skip('Yarn not available, install it via `npm install -g yarn`');
-                                        });
+                                        return exec('yarn', [], { cwd: dirName }).pipe(catchError(function (err) {
+                                            throwError(err);
+                                        }));
                                     }
                                 },
                                 {
                                     title: 'Installing with npm',
                                     enabled: function (ctx) { return ctx.npm === true && ctx.yarn === false; },
-                                    task: function () { return execa('npm', ['install'], { cwd: dirName }); }
+                                    task: function () {
+                                        return exec('npm', ['install'], { cwd: dirName }).pipe(catchError(function (err) {
+                                            throwError(err);
+                                        }));
+                                    }
                                 }
                             ]);
                         }
@@ -176,9 +185,9 @@ var runTask = function (program) {
                                 {
                                     title: 'Installing',
                                     task: function () {
-                                        return execa('bower', ['install'], { cwd: dirName }).catch(function () {
-                                            task.skip('Bower is not installed, install it via `npm install -g bower`');
-                                        });
+                                        return exec('bower', ['install'], { cwd: dirName }).pipe(catchError(function (err) {
+                                            throwError(err);
+                                        }));
                                     }
                                 }
                             ]);
@@ -191,7 +200,11 @@ var runTask = function (program) {
                             return new Listr([
                                 {
                                     title: 'Installing',
-                                    task: function () { return execa('composer', ['install'], { cwd: dirName }); }
+                                    task: function () {
+                                        return exec('composer', ['install'], { cwd: dirName }).pipe(catchError(function (err) {
+                                            throwError(err);
+                                        }));
+                                    }
                                 }
                             ]);
                         }
@@ -203,7 +216,11 @@ var runTask = function (program) {
                             return new Listr([
                                 {
                                     title: 'Installing',
-                                    task: function () { return execa('bundler', ['install'], { cwd: dirName }); }
+                                    task: function () {
+                                        return exec('bundler', ['install'], { cwd: dirName }).pipe(catchError(function (err) {
+                                            throwError(err);
+                                        }));
+                                    }
                                 }
                             ]);
                         }
@@ -222,12 +239,20 @@ var runTask = function (program) {
                     {
                         title: 'yarn test',
                         enabled: function (ctx) { return ctx.yarn !== false; },
-                        task: function () { return execa('yarn', ['test'], { cwd: dirName }); }
+                        task: function () {
+                            return exec('yarn', ['test'], { cwd: dirName }).pipe(catchError(function (err) {
+                                throwError(err);
+                            }));
+                        }
                     },
                     {
                         title: 'npm test',
                         enabled: function (ctx) { return ctx.yarn === false; },
-                        task: function () { return execa('npm', ['test'], { cwd: dirName }); }
+                        task: function () {
+                            return exec('npm', ['test'], { cwd: dirName }).pipe(catchError(function (err) {
+                                throwError(err);
+                            }));
+                        }
                     }
                 ]);
             }
@@ -243,12 +268,20 @@ var runTask = function (program) {
                     {
                         title: 'yarn start',
                         enabled: function (ctx) { return ctx.yarn !== false; },
-                        task: function () { return execa('yarn', ['start'], { cwd: dirName }); }
+                        task: function () {
+                            return exec('yarn', ['start'], { cwd: dirName }).pipe(catchError(function (err) {
+                                throwError(err);
+                            }));
+                        }
                     },
                     {
                         title: 'npm start',
                         enabled: function (ctx) { return ctx.yarn === false; },
-                        task: function () { return execa('npm', ['start'], { cwd: dirName }); }
+                        task: function () {
+                            return exec('npm', ['start'], { cwd: dirName }).pipe(catchError(function (err) {
+                                throwError(err);
+                            }));
+                        }
                     }
                 ]);
             }
