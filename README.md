@@ -60,7 +60,7 @@ bb:user/repository
 $ qlone https://github.com/idleberg/node-qlone.git
 $ qlone gh:idleberg/node-qlone
 
-# Clone repositors and fetch refs
+# Clone repository and fetch refs
 $ qlone gh:idleberg/node-qlone -f
 
 # Clone and install dependencies
