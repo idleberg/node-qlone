@@ -55,6 +55,7 @@ bb:user/repository
 
 **Examples:**
 
+```sh
 # Simple cloning
 $ qlone https://github.com/idleberg/node-qlone.git
 $ qlone gh:idleberg/node-qlone
