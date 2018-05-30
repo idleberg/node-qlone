@@ -37,6 +37,7 @@ const runTask = program => {
     }
     if (is(program.output)) cloneArgs.push(program.output);
     const dirName = is(program.output) ? program.output : basename(repository, '.git');
+    const targetDir = join(process.cwd(), dirName);
 
     const defaultTasks = [
         {
@@ -54,7 +55,7 @@ const runTask = program => {
         const cleanTask = {
             title: 'Cleaning up',
             task: () =>
-                rimrafAsync(join(process.cwd(), dirName)).catch(error => {
+                rimrafAsync(targetDir).catch(error => {
                     if (error !== '') {
                         throw new Error(error);
                     }
@@ -68,7 +69,7 @@ const runTask = program => {
         const fetchTask: ListrOptions = {
             title: 'Fetching refs',
             task: () =>
-                exec('git', ['fetch'], { cwd: dirName }).pipe(
+                exec('git', ['fetch'], { cwd: targetDir }).pipe(
                     catchError(err => {
                         throwError(err);
                     })
@@ -86,7 +87,7 @@ const runTask = program => {
                     {
                         title: 'Detecting .gitmodules',
                         task: (ctx, task) =>
-                            existsAsync(join(process.cwd(), dirName, '.gitmodules')).then(result => {
+                            existsAsync(join(targetDir, '.gitmodules')).then(result => {
                                 ctx.gitmodules = result;
 
                                 if (result === false) {
@@ -97,7 +98,7 @@ const runTask = program => {
                     {
                         title: 'Detecting package.json',
                         task: (ctx, task) =>
-                            existsAsync(join(process.cwd(), dirName, 'package.json')).then(result => {
+                            existsAsync(join(targetDir, 'package.json')).then(result => {
                                 ctx.npm = result;
 
                                 if (result === false) {
@@ -108,7 +109,7 @@ const runTask = program => {
                     {
                         title: 'Detecting bower.json',
                         task: (ctx, task) =>
-                            existsAsync(join(process.cwd(), dirName, 'bower.json')).then(result => {
+                            existsAsync(join(targetDir, 'bower.json')).then(result => {
                                 ctx.bower = result;
 
                                 if (result === false) {
@@ -119,7 +120,7 @@ const runTask = program => {
                     {
                         title: 'Detecting composer.json',
                         task: (ctx, task) =>
-                            existsAsync(join(process.cwd(), dirName, 'composer.json')).then(result => {
+                            existsAsync(join(targetDir, dirName, 'composer.json')).then(result => {
                                 ctx.composer = result;
 
                                 if (result === false) {
@@ -130,7 +131,7 @@ const runTask = program => {
                     {
                         title: 'Detecting Gemfile',
                         task: (ctx, task) =>
-                            existsAsync(join(process.cwd(), dirName, 'Gemfile')).then(result => {
+                            existsAsync(join(targetDir, dirName, 'Gemfile')).then(result => {
                                 ctx.bundler = result;
 
                                 if (result === false) {
@@ -155,7 +156,7 @@ const runTask = program => {
                                 {
                                     title: 'Installing',
                                     task: () =>
-                                        exec('git', ['submodule', 'update', '--init', '--recursive'], { cwd: dirName }).pipe(
+                                        exec('git', ['submodule', 'update', '--init', '--recursive'], { cwd: targetDir }).pipe(
                                             catchError(err => {
                                                 throwError(err);
                                             })
@@ -173,7 +174,7 @@ const runTask = program => {
                                     title: 'Installing with Yarn',
                                     enabled: ctx => ctx.npm === true,
                                     task: (ctx, task) =>
-                                        exec('yarn', [], { cwd: dirName }).pipe(
+                                        exec('yarn', [], { cwd: targetDir }).pipe(
                                             catchError(err => {
                                                 throwError(err);
                                             })
@@ -183,7 +184,7 @@ const runTask = program => {
                                     title: 'Installing with npm',
                                     enabled: ctx => ctx.npm === true && ctx.yarn === false,
                                     task: () =>
-                                        exec('npm', ['install'], { cwd: dirName }).pipe(
+                                        exec('npm', ['install'], { cwd: targetDir }).pipe(
                                             catchError(err => {
                                                 throwError(err);
                                             })
@@ -200,7 +201,7 @@ const runTask = program => {
                                 {
                                     title: 'Installing',
                                     task: () =>
-                                        exec('bower', ['install'], { cwd: dirName }).pipe(
+                                        exec('bower', ['install'], { cwd: targetDir }).pipe(
                                             catchError(err => {
                                                 throwError(err);
                                             })
@@ -217,7 +218,7 @@ const runTask = program => {
                                 {
                                     title: 'Installing',
                                     task: () =>
-                                        exec('composer', ['install'], { cwd: dirName }).pipe(
+                                        exec('composer', ['install'], { cwd: targetDir }).pipe(
                                             catchError(err => {
                                                 throwError(err);
                                             })
@@ -234,7 +235,7 @@ const runTask = program => {
                                 {
                                     title: 'Installing',
                                     task: () =>
-                                        exec('bundler', ['install'], { cwd: dirName }).pipe(
+                                        exec('bundler', ['install'], { cwd: targetDir }).pipe(
                                             catchError(err => {
                                                 throwError(err);
                                             })
@@ -260,7 +261,7 @@ const runTask = program => {
                         title: 'yarn test',
                         enabled: ctx => ctx.yarn !== false,
                         task: () =>
-                            exec('yarn', ['test'], { cwd: dirName }).pipe(
+                            exec('yarn', ['test'], { cwd: targetDir }).pipe(
                                 catchError(err => {
                                     throwError(err);
                                 })
@@ -270,7 +271,7 @@ const runTask = program => {
                         title: 'npm test',
                         enabled: ctx => ctx.yarn === false,
                         task: () =>
-                            exec('npm', ['test'], { cwd: dirName }).pipe(
+                            exec('npm', ['test'], { cwd: targetDir }).pipe(
                                 catchError(err => {
                                     throwError(err);
                                 })
@@ -293,7 +294,7 @@ const runTask = program => {
                         title: 'yarn start',
                         enabled: ctx => ctx.yarn !== false,
                         task: () =>
-                            exec('yarn', ['start'], { cwd: dirName }).pipe(
+                            exec('yarn', ['start'], { cwd: targetDir }).pipe(
                                 catchError(err => {
                                     throwError(err);
                                 })
@@ -303,7 +304,7 @@ const runTask = program => {
                         title: 'npm start',
                         enabled: ctx => ctx.yarn === false,
                         task: () =>
-                            exec('npm', ['start'], { cwd: dirName }).pipe(
+                            exec('npm', ['start'], { cwd: targetDir }).pipe(
                                 catchError(err => {
                                     throwError(err);
                                 })

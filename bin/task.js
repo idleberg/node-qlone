@@ -33,6 +33,7 @@ var runTask = function (program) {
     if (is(program.output))
         cloneArgs.push(program.output);
     var dirName = is(program.output) ? program.output : basename(repository, '.git');
+    var targetDir = join(process.cwd(), dirName);
     var defaultTasks = [
         {
             title: 'Cloning repository',
@@ -47,7 +48,7 @@ var runTask = function (program) {
         var cleanTask = {
             title: 'Cleaning up',
             task: function () {
-                return rimrafAsync(join(process.cwd(), dirName)).catch(function (error) {
+                return rimrafAsync(targetDir).catch(function (error) {
                     if (error !== '') {
                         throw new Error(error);
                     }
@@ -60,7 +61,7 @@ var runTask = function (program) {
         var fetchTask = {
             title: 'Fetching refs',
             task: function () {
-                return exec('git', ['fetch'], { cwd: dirName }).pipe(catchError(function (err) {
+                return exec('git', ['fetch'], { cwd: targetDir }).pipe(catchError(function (err) {
                     throwError(err);
                 }));
             }
@@ -75,7 +76,7 @@ var runTask = function (program) {
                     {
                         title: 'Detecting .gitmodules',
                         task: function (ctx, task) {
-                            return existsAsync(join(process.cwd(), dirName, '.gitmodules')).then(function (result) {
+                            return existsAsync(join(targetDir, '.gitmodules')).then(function (result) {
                                 ctx.gitmodules = result;
                                 if (result === false) {
                                     task.skip('No .gitmodules found');
@@ -86,7 +87,7 @@ var runTask = function (program) {
                     {
                         title: 'Detecting package.json',
                         task: function (ctx, task) {
-                            return existsAsync(join(process.cwd(), dirName, 'package.json')).then(function (result) {
+                            return existsAsync(join(targetDir, 'package.json')).then(function (result) {
                                 ctx.npm = result;
                                 if (result === false) {
                                     task.skip('No package.json found');
@@ -97,7 +98,7 @@ var runTask = function (program) {
                     {
                         title: 'Detecting bower.json',
                         task: function (ctx, task) {
-                            return existsAsync(join(process.cwd(), dirName, 'bower.json')).then(function (result) {
+                            return existsAsync(join(targetDir, 'bower.json')).then(function (result) {
                                 ctx.bower = result;
                                 if (result === false) {
                                     task.skip('No bower.json found');
@@ -108,7 +109,7 @@ var runTask = function (program) {
                     {
                         title: 'Detecting composer.json',
                         task: function (ctx, task) {
-                            return existsAsync(join(process.cwd(), dirName, 'composer.json')).then(function (result) {
+                            return existsAsync(join(targetDir, dirName, 'composer.json')).then(function (result) {
                                 ctx.composer = result;
                                 if (result === false) {
                                     task.skip('No composer.json found');
@@ -119,7 +120,7 @@ var runTask = function (program) {
                     {
                         title: 'Detecting Gemfile',
                         task: function (ctx, task) {
-                            return existsAsync(join(process.cwd(), dirName, 'Gemfile')).then(function (result) {
+                            return existsAsync(join(targetDir, dirName, 'Gemfile')).then(function (result) {
                                 ctx.bundler = result;
                                 if (result === false) {
                                     task.skip('No Gemfile found');
@@ -143,7 +144,7 @@ var runTask = function (program) {
                                 {
                                     title: 'Installing',
                                     task: function () {
-                                        return exec('git', ['submodule', 'update', '--init', '--recursive'], { cwd: dirName }).pipe(catchError(function (err) {
+                                        return exec('git', ['submodule', 'update', '--init', '--recursive'], { cwd: targetDir }).pipe(catchError(function (err) {
                                             throwError(err);
                                         }));
                                     }
@@ -160,7 +161,7 @@ var runTask = function (program) {
                                     title: 'Installing with Yarn',
                                     enabled: function (ctx) { return ctx.npm === true; },
                                     task: function (ctx, task) {
-                                        return exec('yarn', [], { cwd: dirName }).pipe(catchError(function (err) {
+                                        return exec('yarn', [], { cwd: targetDir }).pipe(catchError(function (err) {
                                             throwError(err);
                                         }));
                                     }
@@ -169,7 +170,7 @@ var runTask = function (program) {
                                     title: 'Installing with npm',
                                     enabled: function (ctx) { return ctx.npm === true && ctx.yarn === false; },
                                     task: function () {
-                                        return exec('npm', ['install'], { cwd: dirName }).pipe(catchError(function (err) {
+                                        return exec('npm', ['install'], { cwd: targetDir }).pipe(catchError(function (err) {
                                             throwError(err);
                                         }));
                                     }
@@ -185,7 +186,7 @@ var runTask = function (program) {
                                 {
                                     title: 'Installing',
                                     task: function () {
-                                        return exec('bower', ['install'], { cwd: dirName }).pipe(catchError(function (err) {
+                                        return exec('bower', ['install'], { cwd: targetDir }).pipe(catchError(function (err) {
                                             throwError(err);
                                         }));
                                     }
@@ -201,7 +202,7 @@ var runTask = function (program) {
                                 {
                                     title: 'Installing',
                                     task: function () {
-                                        return exec('composer', ['install'], { cwd: dirName }).pipe(catchError(function (err) {
+                                        return exec('composer', ['install'], { cwd: targetDir }).pipe(catchError(function (err) {
                                             throwError(err);
                                         }));
                                     }
@@ -217,7 +218,7 @@ var runTask = function (program) {
                                 {
                                     title: 'Installing',
                                     task: function () {
-                                        return exec('bundler', ['install'], { cwd: dirName }).pipe(catchError(function (err) {
+                                        return exec('bundler', ['install'], { cwd: targetDir }).pipe(catchError(function (err) {
                                             throwError(err);
                                         }));
                                     }
@@ -240,7 +241,7 @@ var runTask = function (program) {
                         title: 'yarn test',
                         enabled: function (ctx) { return ctx.yarn !== false; },
                         task: function () {
-                            return exec('yarn', ['test'], { cwd: dirName }).pipe(catchError(function (err) {
+                            return exec('yarn', ['test'], { cwd: targetDir }).pipe(catchError(function (err) {
                                 throwError(err);
                             }));
                         }
@@ -249,7 +250,7 @@ var runTask = function (program) {
                         title: 'npm test',
                         enabled: function (ctx) { return ctx.yarn === false; },
                         task: function () {
-                            return exec('npm', ['test'], { cwd: dirName }).pipe(catchError(function (err) {
+                            return exec('npm', ['test'], { cwd: targetDir }).pipe(catchError(function (err) {
                                 throwError(err);
                             }));
                         }
@@ -269,7 +270,7 @@ var runTask = function (program) {
                         title: 'yarn start',
                         enabled: function (ctx) { return ctx.yarn !== false; },
                         task: function () {
-                            return exec('yarn', ['start'], { cwd: dirName }).pipe(catchError(function (err) {
+                            return exec('yarn', ['start'], { cwd: targetDir }).pipe(catchError(function (err) {
                                 throwError(err);
                             }));
                         }
@@ -278,7 +279,7 @@ var runTask = function (program) {
                         title: 'npm start',
                         enabled: function (ctx) { return ctx.yarn === false; },
                         task: function () {
-                            return exec('npm', ['start'], { cwd: dirName }).pipe(catchError(function (err) {
+                            return exec('npm', ['start'], { cwd: targetDir }).pipe(catchError(function (err) {
                                 throwError(err);
                             }));
                         }
