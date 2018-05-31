@@ -303,17 +303,17 @@ function is(input) {
 }
 function isRepository(repository) {
     if (is(repository)) {
-        var standardPrefixes = /^(ssh|git|https?|ftps?):\/\//i;
-        var githubPrefixes = /^(gh|github):/i;
-        var bitbucketPrefixes = /^(bb|bitbucket):/i;
-        if (standardPrefixes.test(repository)) {
+        var isGit = /^(ssh|git|https?|ftps?):\/\//i;
+        var isGitHub = /^(gh|github):/i;
+        var isBitbucket = /^(bb|bitbucket):/i;
+        if (isGit.test(repository)) {
             return repository;
         }
-        else if (githubPrefixes.test(repository) && repository.split('/').length === 2) {
+        else if (isGitHub.test(repository) && repository.split('/').length === 2) {
             repository = "https://github.com/" + repository.replace(/(gh|github):/, '');
             return repository;
         }
-        else if (bitbucketPrefixes.test(repository) && repository.split('/').length === 2) {
+        else if (isBitbucket.test(repository) && repository.split('/').length === 2) {
             repository = "https://bitbucket.com/" + repository.replace(/(bb|bitbucket):/, '');
             return repository;
         }

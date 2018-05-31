@@ -334,16 +334,16 @@ function is(input: string|undefined): boolean {
 
 function isRepository(repository: string): string {
     if (is(repository)) {
-        const standardPrefixes = /^(ssh|git|https?|ftps?):\/\//i;
-        const githubPrefixes = /^(gh|github):/i;
-        const bitbucketPrefixes = /^(bb|bitbucket):/i;
+        const isGit = /^(ssh|git|https?|ftps?):\/\//i;
+        const isGitHub = /^(gh|github):/i;
+        const isBitbucket = /^(bb|bitbucket):/i;
 
-        if (standardPrefixes.test(repository)) {
+        if (isGit.test(repository)) {
             return repository;
-        } else if (githubPrefixes.test(repository) && repository.split('/').length === 2) {
+        } else if (isGitHub.test(repository) && repository.split('/').length === 2) {
             repository = `https://github.com/${repository.replace(/(gh|github):/, '')}`;
             return repository;
-        } else if (bitbucketPrefixes.test(repository) && repository.split('/').length === 2) {
+        } else if (isBitbucket.test(repository) && repository.split('/').length === 2) {
             repository = `https://bitbucket.com/${repository.replace(/(bb|bitbucket):/, '')}`;
             return repository;
         } else {
