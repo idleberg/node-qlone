@@ -62,6 +62,8 @@ ftp[s]://host.xz[:port]/path/to/repo.git/
 # Special syntaxes
 github:user/repository
 gh:user/repository
+gitlab:user/repository
+gl:user/repository
 bitbucket:user/repository
 bb:user/repository
 ```

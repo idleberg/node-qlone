@@ -336,12 +336,16 @@ function isRepository(repository: string): string {
     if (is(repository)) {
         const isGit = /^(ssh|git|https?|ftps?):\/\//i;
         const isGitHub = /^(gh|github):/i;
+        const isGitLab = /^(gl|gitlab):/i;
         const isBitbucket = /^(bb|bitbucket):/i;
 
         if (isGit.test(repository)) {
             return repository;
         } else if (isGitHub.test(repository) && repository.split('/').length === 2) {
             repository = `https://github.com/${repository.replace(/(gh|github):/, '')}`;
+            return repository;
+        } else if (isGitLab.test(repository) && repository.split('/').length === 2) {
+            repository = `https://gitlab.com/${repository.replace(/(gl|gitlab):/, '')}`;
             return repository;
         } else if (isBitbucket.test(repository) && repository.split('/').length === 2) {
             repository = `https://bitbucket.com/${repository.replace(/(bb|bitbucket):/, '')}`;
