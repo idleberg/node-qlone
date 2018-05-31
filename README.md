@@ -6,7 +6,7 @@
 [![David](https://img.shields.io/david/idleberg/node-qlone.svg?style=flat-square)](https://david-dm.org/idleberg/node-qlone)
 [![David](https://img.shields.io/david/dev/idleberg/node-qlone.svg?style=flat-square)](https://david-dm.org/idleberg/node-qlone?type=dev)
 
-CLI tool to clone repositories, install dependencies (Node, Bower, Composer, Git modules, and Ruby gems) and run (Node) start scripts. All in one command.
+CLI tool to clone repositories, install dependencies and run Node scripts. All in one command.
 
 ## Installation
 
@@ -14,7 +14,20 @@ CLI tool to clone repositories, install dependencies (Node, Bower, Composer, Git
 
 ## Usage
 
-It's always a good start to look at the available options, so let's do that:
+Cloning a repository and getting it ready to use can be tedious. This is where `qlone` comes in. See these two examples:
+
+```sh
+# Without qlone
+$ git clone https://github.com/idleberg/node-qlone
+$ cd node-qlone
+$ npm install
+$ npm start
+
+# With clone
+$ qlone gh:idleberg/node-qlone -is
+```
+
+Let's take a look at the available options:
 
 ```sh
 $ qlone help
@@ -69,6 +82,14 @@ $ qlone gh:idleberg/node-qlone -i
 # Clone, install dependencies, run test and start scripts
 $ qlone gh:idleberg/node-qlone -its
 ```
+
+When providing the `--install` flag, the following dependencies will be installed, if available:
+
+- Node packages
+- Bower packages
+- Composer packages
+- Ruby gems
+- Git submodules
 
 ## License
 
