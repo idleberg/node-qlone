@@ -59,7 +59,7 @@ git://host.xz[:port]/path/to/repo.git/
 http[s]://host.xz[:port]/path/to/repo.git/
 ftp[s]://host.xz[:port]/path/to/repo.git/
 
-# Special syntaxes
+# Special shorthands
 github:user/repository
 gh:user/repository
 gitlab:user/repository
