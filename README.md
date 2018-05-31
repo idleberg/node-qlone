@@ -10,7 +10,7 @@ CLI tool to clone repositories, install dependencies and run Node scripts. All i
 
 ## Installation
 
-`yarn global add qlone || npm install qlone -g`
+`yarn global add qlone || npm install --global qlone`
 
 ## Usage
 
