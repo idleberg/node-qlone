@@ -1,6 +1,6 @@
 {
   "name": "qlone",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "CLI tool to clone repositories, install dependencies and run scripts. All in one command.",
   "license": "MIT",
   "main": "index.js",
