@@ -12,6 +12,7 @@ program
     .option('-i, --install', 'installs dependencies for Node, Bower, Composer etc.')
     .option('-o, --output <folder>', 'specify output directory')
     .option('-O, --overwrite', 'overwrite existing folder')
+    .option('-r, --run <script>', 'runs specified Node script')
     .option('-s, --start', 'runs Node start script')
     .option('-t, --test', 'runs Node test script')
     .parse(process.argv);

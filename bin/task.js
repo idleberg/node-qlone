@@ -142,6 +142,28 @@ var runTask = function (program) {
                                 }
                             });
                         }
+                    },
+                    {
+                        title: 'Detecting Gopkg.toml',
+                        task: function (ctx, task) {
+                            return existsAsync(join(targetDir, dirName, 'Gopkg.toml')).then(function (result) {
+                                ctx.godep = result;
+                                if (result === false) {
+                                    task.skip('No Gopkg.toml found');
+                                }
+                            });
+                        }
+                    },
+                    {
+                        title: 'Detecting pubspec.yaml',
+                        task: function (ctx, task) {
+                            return existsAsync(join(targetDir, dirName, 'pubspec.yaml')).then(function (result) {
+                                ctx.flutter = result;
+                                if (result === false) {
+                                    task.skip('No pubspec.yaml found');
+                                }
+                            });
+                        }
                     }
                 ]);
             }
@@ -159,8 +181,8 @@ var runTask = function (program) {
                                 {
                                     title: 'Installing',
                                     task: function () {
-                                        return exec('git', ['submodule', 'update', '--init', '--recursive'], { cwd: targetDir }).pipe(catchError(function (err) {
-                                            throwError(err);
+                                        return exec('git', ['submodule', 'update', '--init', '--recursive'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                            throwError(error);
                                         }));
                                     }
                                 }
@@ -176,8 +198,8 @@ var runTask = function (program) {
                                     title: 'Installing with Yarn',
                                     enabled: function (ctx) { return ctx.npm === true; },
                                     task: function (ctx, task) {
-                                        return exec('yarn', [], { cwd: targetDir }).pipe(catchError(function (err) {
-                                            throwError(err);
+                                        return exec('yarn', [], { cwd: targetDir }).pipe(catchError(function (error) {
+                                            throwError(error);
                                         }));
                                     }
                                 },
@@ -185,8 +207,8 @@ var runTask = function (program) {
                                     title: 'Installing with npm',
                                     enabled: function (ctx) { return ctx.npm === true && ctx.yarn === false; },
                                     task: function () {
-                                        return exec('npm', ['install'], { cwd: targetDir }).pipe(catchError(function (err) {
-                                            throwError(err);
+                                        return exec('npm', ['install'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                            throwError(error);
                                         }));
                                     }
                                 }
@@ -201,8 +223,8 @@ var runTask = function (program) {
                                 {
                                     title: 'Installing',
                                     task: function () {
-                                        return exec('bower', ['install'], { cwd: targetDir }).pipe(catchError(function (err) {
-                                            throwError(err);
+                                        return exec('bower', ['install'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                            throwError(error);
                                         }));
                                     }
                                 }
@@ -217,8 +239,8 @@ var runTask = function (program) {
                                 {
                                     title: 'Installing',
                                     task: function () {
-                                        return exec('composer', ['install'], { cwd: targetDir }).pipe(catchError(function (err) {
-                                            throwError(err);
+                                        return exec('composer', ['install'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                            throwError(error);
                                         }));
                                     }
                                 }
@@ -233,8 +255,8 @@ var runTask = function (program) {
                                 {
                                     title: 'Installing',
                                     task: function () {
-                                        return exec('pipenv', ['install'], { cwd: targetDir }).pipe(catchError(function (err) {
-                                            throwError(err);
+                                        return exec('pipenv', ['install'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                            throwError(error);
                                         }));
                                     }
                                 }
@@ -249,8 +271,40 @@ var runTask = function (program) {
                                 {
                                     title: 'Installing',
                                     task: function () {
-                                        return exec('bundler', ['install'], { cwd: targetDir }).pipe(catchError(function (err) {
-                                            throwError(err);
+                                        return exec('bundler', ['install'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                            throwError(error);
+                                        }));
+                                    }
+                                }
+                            ]);
+                        }
+                    },
+                    {
+                        title: 'Go dependencies',
+                        enabled: function (ctx) { return ctx.godep !== false; },
+                        task: function () {
+                            return new Listr([
+                                {
+                                    title: 'Installing',
+                                    task: function () {
+                                        return exec('dep', ['ensure'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                            throwError(error);
+                                        }));
+                                    }
+                                }
+                            ]);
+                        }
+                    },
+                    {
+                        title: 'Dart packages',
+                        enabled: function (ctx) { return ctx.flutter !== false; },
+                        task: function () {
+                            return new Listr([
+                                {
+                                    title: 'Installing',
+                                    task: function () {
+                                        return exec('flutter', ['packages', 'get'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                            throwError(error);
                                         }));
                                     }
                                 }
@@ -272,8 +326,8 @@ var runTask = function (program) {
                         title: 'yarn test',
                         enabled: function (ctx) { return ctx.yarn !== false; },
                         task: function () {
-                            return exec('yarn', ['test'], { cwd: targetDir }).pipe(catchError(function (err) {
-                                throwError(err);
+                            return exec('yarn', ['test'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                throwError(error);
                             }));
                         }
                     },
@@ -281,8 +335,8 @@ var runTask = function (program) {
                         title: 'npm test',
                         enabled: function (ctx) { return ctx.yarn === false; },
                         task: function () {
-                            return exec('npm', ['test'], { cwd: targetDir }).pipe(catchError(function (err) {
-                                throwError(err);
+                            return exec('npm', ['test'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                throwError(error);
                             }));
                         }
                     }
@@ -290,6 +344,35 @@ var runTask = function (program) {
             }
         };
         defaultTasks.push(testTask);
+    }
+    if (is(program.run)) {
+        var runTask_1 = {
+            title: "Running " + program.run + " script",
+            enabled: function (ctx) { return ctx.npm === true; },
+            task: function () {
+                return new Listr([
+                    {
+                        title: "yarn run " + program.run,
+                        enabled: function (ctx) { return ctx.yarn !== false; },
+                        task: function () {
+                            return exec('yarn', ['run', program.run], { cwd: targetDir }).pipe(catchError(function (error) {
+                                throwError(error);
+                            }));
+                        }
+                    },
+                    {
+                        title: "npm run " + program.run,
+                        enabled: function (ctx) { return ctx.yarn === false; },
+                        task: function () {
+                            return exec('npm', ['run', program.run], { cwd: targetDir }).pipe(catchError(function (error) {
+                                throwError(error);
+                            }));
+                        }
+                    }
+                ]);
+            }
+        };
+        defaultTasks.push(runTask_1);
     }
     if (is(program.start)) {
         var startTask = {
@@ -301,8 +384,8 @@ var runTask = function (program) {
                         title: 'yarn start',
                         enabled: function (ctx) { return ctx.yarn !== false; },
                         task: function () {
-                            return exec('yarn', ['start'], { cwd: targetDir }).pipe(catchError(function (err) {
-                                throwError(err);
+                            return exec('yarn', ['start'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                throwError(error);
                             }));
                         }
                     },
@@ -310,8 +393,8 @@ var runTask = function (program) {
                         title: 'npm start',
                         enabled: function (ctx) { return ctx.yarn === false; },
                         task: function () {
-                            return exec('npm', ['start'], { cwd: targetDir }).pipe(catchError(function (err) {
-                                throwError(err);
+                            return exec('npm', ['start'], { cwd: targetDir }).pipe(catchError(function (error) {
+                                throwError(error);
                             }));
                         }
                     }

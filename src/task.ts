@@ -150,6 +150,28 @@ const runTask = program => {
                                     task.skip('No Gemfile found');
                                 }
                             })
+                    },
+                    {
+                        title: 'Detecting Gopkg.toml',
+                        task: (ctx, task) =>
+                            existsAsync(join(targetDir, dirName, 'Gopkg.toml')).then(result => {
+                                ctx.godep = result;
+
+                                if (result === false) {
+                                    task.skip('No Gopkg.toml found');
+                                }
+                            })
+                    },
+                    {
+                        title: 'Detecting pubspec.yaml',
+                        task: (ctx, task) =>
+                            existsAsync(join(targetDir, dirName, 'pubspec.yaml')).then(result => {
+                                ctx.flutter = result;
+
+                                if (result === false) {
+                                    task.skip('No pubspec.yaml found');
+                                }
+                            })
                     }
                 ]);
             }
@@ -169,8 +191,8 @@ const runTask = program => {
                                     title: 'Installing',
                                     task: () =>
                                         exec('git', ['submodule', 'update', '--init', '--recursive'], { cwd: targetDir }).pipe(
-                                            catchError(err => {
-                                                throwError(err);
+                                            catchError(error => {
+                                                throwError(error);
                                             })
                                         )
                                 }
@@ -187,8 +209,8 @@ const runTask = program => {
                                     enabled: ctx => ctx.npm === true,
                                     task: (ctx, task) =>
                                         exec('yarn', [], { cwd: targetDir }).pipe(
-                                            catchError(err => {
-                                                throwError(err);
+                                            catchError(error => {
+                                                throwError(error);
                                             })
                                         )
                                 },
@@ -197,8 +219,8 @@ const runTask = program => {
                                     enabled: ctx => ctx.npm === true && ctx.yarn === false,
                                     task: () =>
                                         exec('npm', ['install'], { cwd: targetDir }).pipe(
-                                            catchError(err => {
-                                                throwError(err);
+                                            catchError(error => {
+                                                throwError(error);
                                             })
                                         )
                                 }
@@ -214,8 +236,8 @@ const runTask = program => {
                                     title: 'Installing',
                                     task: () =>
                                         exec('bower', ['install'], { cwd: targetDir }).pipe(
-                                            catchError(err => {
-                                                throwError(err);
+                                            catchError(error => {
+                                                throwError(error);
                                             })
                                         )
                                 }
@@ -231,8 +253,8 @@ const runTask = program => {
                                     title: 'Installing',
                                     task: () =>
                                         exec('composer', ['install'], { cwd: targetDir }).pipe(
-                                            catchError(err => {
-                                                throwError(err);
+                                            catchError(error => {
+                                                throwError(error);
                                             })
                                         )
                                 }
@@ -248,8 +270,8 @@ const runTask = program => {
                                     title: 'Installing',
                                     task: () =>
                                         exec('pipenv', ['install'], { cwd: targetDir }).pipe(
-                                            catchError(err => {
-                                                throwError(err);
+                                            catchError(error => {
+                                                throwError(error);
                                             })
                                         )
                                 }
@@ -265,8 +287,42 @@ const runTask = program => {
                                     title: 'Installing',
                                     task: () =>
                                         exec('bundler', ['install'], { cwd: targetDir }).pipe(
-                                            catchError(err => {
-                                                throwError(err);
+                                            catchError(error => {
+                                                throwError(error);
+                                            })
+                                        )
+                                }
+                            ]);
+                        }
+                    },
+                    {
+                        title: 'Go dependencies',
+                        enabled: ctx => ctx.godep !== false,
+                        task: () => {
+                            return new Listr([
+                                {
+                                    title: 'Installing',
+                                    task: () =>
+                                        exec('dep', ['ensure'], { cwd: targetDir }).pipe(
+                                            catchError(error => {
+                                                throwError(error);
+                                            })
+                                        )
+                                }
+                            ]);
+                        }
+                    },
+                    {
+                        title: 'Dart packages',
+                        enabled: ctx => ctx.flutter !== false,
+                        task: () => {
+                            return new Listr([
+                                {
+                                    title: 'Installing',
+                                    task: () =>
+                                        exec('flutter', ['packages', 'get'], { cwd: targetDir }).pipe(
+                                            catchError(error => {
+                                                throwError(error);
                                             })
                                         )
                                 }
@@ -291,8 +347,8 @@ const runTask = program => {
                         enabled: ctx => ctx.yarn !== false,
                         task: () =>
                             exec('yarn', ['test'], { cwd: targetDir }).pipe(
-                                catchError(err => {
-                                    throwError(err);
+                                catchError(error => {
+                                    throwError(error);
                                 })
                             )
                     },
@@ -301,8 +357,8 @@ const runTask = program => {
                         enabled: ctx => ctx.yarn === false,
                         task: () =>
                             exec('npm', ['test'], { cwd: targetDir }).pipe(
-                                catchError(err => {
-                                    throwError(err);
+                                catchError(error => {
+                                    throwError(error);
                                 })
                             )
                     }
@@ -311,6 +367,39 @@ const runTask = program => {
         };
 
         defaultTasks.push(testTask);
+    }
+
+    if (is(program.run)) {
+        const runTask: ListrOptions = {
+            title: `Running ${program.run} script`,
+            enabled: ctx => ctx.npm === true,
+            task: () => {
+                return new Listr([
+                    {
+                        title: `yarn run ${program.run}`,
+                        enabled: ctx => ctx.yarn !== false,
+                        task: () =>
+                            exec('yarn', ['run', program.run], { cwd: targetDir }).pipe(
+                                catchError(error => {
+                                    throwError(error);
+                                })
+                            )
+                    },
+                    {
+                        title: `npm run ${program.run}`,
+                        enabled: ctx => ctx.yarn === false,
+                        task: () =>
+                            exec('npm', ['run', program.run], { cwd: targetDir }).pipe(
+                                catchError(error => {
+                                    throwError(error);
+                                })
+                            )
+                    }
+                ]);
+            }
+        };
+
+        defaultTasks.push(runTask);
     }
 
     if (is(program.start)) {
@@ -324,8 +413,8 @@ const runTask = program => {
                         enabled: ctx => ctx.yarn !== false,
                         task: () =>
                             exec('yarn', ['start'], { cwd: targetDir }).pipe(
-                                catchError(err => {
-                                    throwError(err);
+                                catchError(error => {
+                                    throwError(error);
                                 })
                             )
                     },
@@ -334,8 +423,8 @@ const runTask = program => {
                         enabled: ctx => ctx.yarn === false,
                         task: () =>
                             exec('npm', ['start'], { cwd: targetDir }).pipe(
-                                catchError(err => {
-                                    throwError(err);
+                                catchError(error => {
+                                    throwError(error);
                                 })
                             )
                     }

@@ -45,6 +45,7 @@ $ qlone help
     -i, --install          installs dependencies for Node, Bower, Composer etc.
     -o, --output <folder>  specify output directory
     -O, --overwrite        overwrite existing folder
+    -r, --run <script>     runs specified Node script
     -s, --start            runs Node start script
     -t, --test             runs Node test script
     -h, --help             output usage information
@@ -87,11 +88,14 @@ $ qlone gh:idleberg/node-qlone -its
 
 When providing the `--install` flag, the following dependencies will be installed, if available:
 
-- Node packages
-- Bower packages
-- Composer packages
-- Ruby gems
-- Git submodules
+- Node packages (requires `package.json`)
+- Bower packages (requires `bower.json`)
+- Composer packages (requires `composer.json`)
+- Dart dependencies (requires `pubspec.yaml`)
+- Go dependencies (requires `Gopkg.toml`)
+- Python packages (requires `Pipfile`)
+- Ruby gems (requires `Gemfile.json`)
+- Git submodules (requires `.gitmodules`)
 
 ## License
 
