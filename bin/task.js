@@ -42,9 +42,9 @@ var runTask = function (program) {
         {
             title: 'Cloning repository',
             task: function () {
-                return exec('git', cloneArgs).pipe(catchError(function (err) {
-                    throwError(err);
-                }));
+                return execa('git', cloneArgs).catch(function (error) {
+                    throw new Error(error);
+                });
             }
         }
     ];
@@ -65,9 +65,9 @@ var runTask = function (program) {
         var fetchTask = {
             title: 'Fetching refs',
             task: function () {
-                return exec('git', ['fetch'], { cwd: targetDir }).pipe(catchError(function (err) {
-                    throwError(err);
-                }));
+                return execa('git', ['fetch'], { cwd: targetDir }).catch(function (error) {
+                    throw new Error(error);
+                });
             }
         };
         defaultTasks.push(fetchTask);
@@ -117,6 +117,17 @@ var runTask = function (program) {
                                 ctx.composer = result;
                                 if (result === false) {
                                     task.skip('No composer.json found');
+                                }
+                            });
+                        }
+                    },
+                    {
+                        title: 'Detecting Pipfile',
+                        task: function (ctx, task) {
+                            return existsAsync(join(targetDir, dirName, 'Pipfile')).then(function (result) {
+                                ctx.pipenv = result;
+                                if (result === false) {
+                                    task.skip('No Pipfile found');
                                 }
                             });
                         }
@@ -207,6 +218,22 @@ var runTask = function (program) {
                                     title: 'Installing',
                                     task: function () {
                                         return exec('composer', ['install'], { cwd: targetDir }).pipe(catchError(function (err) {
+                                            throwError(err);
+                                        }));
+                                    }
+                                }
+                            ]);
+                        }
+                    },
+                    {
+                        title: 'Pip packages',
+                        enabled: function (ctx) { return ctx.pipenv !== false; },
+                        task: function () {
+                            return new Listr([
+                                {
+                                    title: 'Installing',
+                                    task: function () {
+                                        return exec('pipenv', ['install'], { cwd: targetDir }).pipe(catchError(function (err) {
                                             throwError(err);
                                         }));
                                     }

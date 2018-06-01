@@ -48,11 +48,9 @@ const runTask = program => {
         {
             title: 'Cloning repository',
             task: () =>
-                exec('git', cloneArgs).pipe(
-                    catchError(err => {
-                        throwError(err);
-                    })
-                )
+                execa('git', cloneArgs).catch( error => {
+                    throw new Error(error);
+                })
         }
     ];
 
@@ -74,11 +72,9 @@ const runTask = program => {
         const fetchTask: ListrOptions = {
             title: 'Fetching refs',
             task: () =>
-                exec('git', ['fetch'], { cwd: targetDir }).pipe(
-                    catchError(err => {
-                        throwError(err);
-                    })
-                )
+                execa('git', ['fetch'], { cwd: targetDir }).catch( error => {
+                    throw new Error(error);
+                })
         };
 
         defaultTasks.push(fetchTask);
@@ -130,6 +126,17 @@ const runTask = program => {
 
                                 if (result === false) {
                                     task.skip('No composer.json found');
+                                }
+                            })
+                    },
+                    {
+                        title: 'Detecting Pipfile',
+                        task: (ctx, task) =>
+                            existsAsync(join(targetDir, dirName, 'Pipfile')).then(result => {
+                                ctx.pipenv = result;
+
+                                if (result === false) {
+                                    task.skip('No Pipfile found');
                                 }
                             })
                     },
@@ -224,6 +231,23 @@ const runTask = program => {
                                     title: 'Installing',
                                     task: () =>
                                         exec('composer', ['install'], { cwd: targetDir }).pipe(
+                                            catchError(err => {
+                                                throwError(err);
+                                            })
+                                        )
+                                }
+                            ]);
+                        }
+                    },
+                    {
+                        title: 'Pip packages',
+                        enabled: ctx => ctx.pipenv !== false,
+                        task: () => {
+                            return new Listr([
+                                {
+                                    title: 'Installing',
+                                    task: () =>
+                                        exec('pipenv', ['install'], { cwd: targetDir }).pipe(
                                             catchError(err => {
                                                 throwError(err);
                                             })
