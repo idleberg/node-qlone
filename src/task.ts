@@ -1,12 +1,13 @@
 const execa = require('execa');
 const Listr = require('listr');
+const logSymbols = require('log-symbols');
 const process = require('process');
 const rimraf = require('rimraf');
 const split = require('split');
 const streamToObservable = require('@samverschueren/stream-to-observable');
 const { basename, join } = require('path');
-const { exists } = require('fs');
 const { catchError, filter } = require('rxjs/operators');
+const { exists } = require('fs');
 const { merge, throwError } = require('rxjs');
 const { promisify } = require('util');
 
@@ -24,10 +25,14 @@ const exec = (cmd, args = [], opts = {}) => {
 
 const runTask = program => {
     let task, tasks;
-    let repository = program.args[0];
-    const cloneArgs = ['clone'];
+    let repository: string = program.args[0];
+    const cloneArgs: Array<string> = ['clone'];
 
-    cloneArgs.push(isRepository(repository));
+    repository = isRepository(repository);
+
+    if (repository === '-1') return console.error(logSymbols.error, 'Error: Unsupported repository format specified');
+
+    cloneArgs.push(repository);
 
     if (is(program.branch)) {
         cloneArgs.push('--branch', program.branch);
@@ -36,8 +41,8 @@ const runTask = program => {
         cloneArgs.push('--depth', program.depth);
     }
     if (is(program.output)) cloneArgs.push(program.output);
-    const dirName = is(program.output) ? program.output : basename(repository, '.git');
-    const targetDir = join(process.cwd(), dirName);
+    const dirName: string = is(program.output) ? program.output : basename(repository, '.git');
+    const targetDir: string = join(process.cwd(), dirName);
 
     const defaultTasks = [
         {
@@ -320,7 +325,7 @@ const runTask = program => {
     tasks = new Listr(defaultTasks);
 
     tasks.run().catch(err => {
-        console.error(err);
+        console.error(logSymbols.error, err);
     });
 };
 
@@ -351,7 +356,7 @@ function isRepository(repository: string): string {
             repository = `https://bitbucket.com/${repository.replace(/(bb|bitbucket):/, '')}`;
             return repository;
         } else {
-            throw new Error('Unsupported repository format specified');
+            return '-1';
         }
     }
 }

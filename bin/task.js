@@ -2,13 +2,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var execa = require('execa');
 var Listr = require('listr');
+var logSymbols = require('log-symbols');
 var process = require('process');
 var rimraf = require('rimraf');
 var split = require('split');
 var streamToObservable = require('@samverschueren/stream-to-observable');
 var _a = require('path'), basename = _a.basename, join = _a.join;
-var exists = require('fs').exists;
 var _b = require('rxjs/operators'), catchError = _b.catchError, filter = _b.filter;
+var exists = require('fs').exists;
 var _c = require('rxjs'), merge = _c.merge, throwError = _c.throwError;
 var promisify = require('util').promisify;
 var existsAsync = promisify(exists);
@@ -23,7 +24,10 @@ var runTask = function (program) {
     var task, tasks;
     var repository = program.args[0];
     var cloneArgs = ['clone'];
-    cloneArgs.push(isRepository(repository));
+    repository = isRepository(repository);
+    if (repository === '-1')
+        return console.error(logSymbols.error, 'Error: Unsupported repository format specified');
+    cloneArgs.push(repository);
     if (is(program.branch)) {
         cloneArgs.push('--branch', program.branch);
     }
@@ -291,7 +295,7 @@ var runTask = function (program) {
     }
     tasks = new Listr(defaultTasks);
     tasks.run().catch(function (err) {
-        console.error(err);
+        console.error(logSymbols.error, err);
     });
 };
 exports.runTask = runTask;
@@ -305,6 +309,7 @@ function isRepository(repository) {
     if (is(repository)) {
         var isGit = /^(ssh|git|https?|ftps?):\/\//i;
         var isGitHub = /^(gh|github):/i;
+        var isGitLab = /^(gl|gitlab):/i;
         var isBitbucket = /^(bb|bitbucket):/i;
         if (isGit.test(repository)) {
             return repository;
@@ -313,12 +318,16 @@ function isRepository(repository) {
             repository = "https://github.com/" + repository.replace(/(gh|github):/, '');
             return repository;
         }
+        else if (isGitLab.test(repository) && repository.split('/').length === 2) {
+            repository = "https://gitlab.com/" + repository.replace(/(gl|gitlab):/, '');
+            return repository;
+        }
         else if (isBitbucket.test(repository) && repository.split('/').length === 2) {
             repository = "https://bitbucket.com/" + repository.replace(/(bb|bitbucket):/, '');
             return repository;
         }
         else {
-            throw new Error('Unsupported repository format specified');
+            return '-1';
         }
     }
 }
