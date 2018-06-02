@@ -26,30 +26,6 @@ $ npm start
 $ qlone gh:idleberg/node-qlone -is
 ```
 
-Let's take a look at the available options:
-
-```sh
-$ qlone help
-
-  Usage: qlone <repository> [options]
-
-  Clones repositories, installs dependencies, runs start scripts
-
-  Options:
-
-    -V, --version          output the version number
-    -b, --branch <branch>  specify git branch
-    -d, --depth <int>      specify git commit depth
-    -f, --fetch            runs git fetch after clone
-    -i, --install          installs dependencies for Node, Bower, Composer etc.
-    -o, --output <folder>  specify output directory
-    -O, --overwrite        overwrite existing folder
-    -r, --run <script>     runs specified Node script
-    -s, --start            runs Node start script
-    -t, --test             runs Node test script
-    -h, --help             output usage information
-```
-
 The repository can be provided in many syntaxes:
 
 ```sh
@@ -93,8 +69,32 @@ When providing the `--install` flag, the following dependencies will be installe
 - Dart dependencies (requires `pubspec.yaml`)
 - Go dependencies (requires `Gopkg.toml`)
 - Python packages (requires `Pipfile`)
-- Ruby gems (requires `Gemfile.json`)
+- Ruby gems (requires `Gemfile`)
 - Git submodules (requires `.gitmodules`)
+
+### Options
+
+Run `qlone --help` to list all available flags:
+
+```
+  Usage: qlone <repository> [options]
+
+  Clones repositories, installs dependencies, runs start scripts
+
+  Options:
+
+    -V, --version          output the version number
+    -b, --branch <branch>  specify git branch
+    -d, --depth <int>      specify git commit depth
+    -f, --fetch            runs git fetch after clone
+    -i, --install          installs dependencies for Node, Bower, Composer etc.
+    -o, --output <folder>  specify output directory
+    -O, --overwrite        overwrite existing folder
+    -r, --run <script>     runs specified Node script
+    -s, --start            runs Node start script
+    -t, --test             runs Node test script
+    -h, --help             output usage information
+```
 
 ## License
 
