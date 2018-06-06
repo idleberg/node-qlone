@@ -22,6 +22,9 @@
     "install dependencies"
   ],
   "types": "./types",
+  "engines": {
+    "node": ">=8.0.0"
+  },
   "dependencies": {
     "@samverschueren/stream-to-observable": "^0.3.0",
     "commander": "^2.15.1",
