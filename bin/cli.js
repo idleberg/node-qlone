@@ -18,5 +18,16 @@ program
     .parse(process.argv);
 if (program.args.length === 0)
     program.help();
-runTask(program);
+var flags = {
+    branch: program.branch,
+    depth: program.depth,
+    fetch: program.fetch,
+    install: program.install,
+    output: program.output,
+    overwrite: program.overwrite,
+    run: program.run,
+    start: program.start,
+    test: program.test
+};
+runTask(program.args, flags);
 //# sourceMappingURL=cli.js.map

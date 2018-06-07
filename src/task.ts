@@ -23,422 +23,424 @@ const exec = (cmd, args = [], opts = {}) => {
     ).pipe(filter(Boolean));
 };
 
-const runTask = program => {
-    let task, tasks;
-    let repository: string = program.args[0];
-    const cloneArgs: Array<string> = ['clone'];
-
-    repository = isRepository(repository);
-
-    if (repository === '-1') return console.error(logSymbols.error, `Error: Unsupported repository format specified: ${program.args[0]}`);
-
-    cloneArgs.push(repository);
-
-    if (is(program.branch)) {
-        cloneArgs.push('--branch', program.branch);
-    }
-    if (is(program.depth)) {
-        cloneArgs.push('--depth', program.depth);
-    }
-    if (is(program.output)) cloneArgs.push(program.output);
-    const dirName: string = is(program.output) ? program.output : basename(repository, '.git');
-    const targetDir: string = join(process.cwd(), dirName);
+const runTask = (repositories, flags) => {
 
     const defaultTasks = [];
+    let task, tasks;
 
-    if (is(program.overwrite)) {
-        const cleanTask = {
-            title: 'Cleaning up',
-            task: () =>
-                rimrafAsync(targetDir).catch(error => {
-                    if (error !== '') {
+    repositories.forEach( (repository, index) => {
+        const cloneArgs: Array<string> = ['clone'];
+        if (is(flags.branch)) {
+            cloneArgs.push('--branch', flags.branch);
+        }
+        if (is(flags.depth)) {
+            cloneArgs.push('--depth', flags.depth);
+        }
+        if (is(flags.output) && flags.length === 1) cloneArgs.push(flags.output);
+
+        repository = isRepository(repository);
+
+        if (repository === '-1') return console.error(logSymbols.error, `Error: Unsupported repository format specified: ${repositories[index]}`);
+
+        cloneArgs.push(repository);
+
+        const dirName: string = is(flags.output) ? flags.output : basename(repository, '.git');
+        const targetDir: string = join(process.cwd(), dirName);
+
+        if (is(flags.overwrite)) {
+            const cleanTask = {
+                title: `Cleaning up ${dirName}`,
+                task: () =>
+                    rimrafAsync(targetDir).catch(error => {
+                        if (error !== '') {
+                            throw new Error(error);
+                        }
+                    })
+            };
+
+            defaultTasks.push(cleanTask);
+        }
+
+        const cloneTask = {
+            title: `Cloning repository ${repository}`,
+            task: (ctx, task) =>
+                execa('git', cloneArgs).catch( error => {
+                    ctx.cloneFailed = true;
+                    task.skip(error.Error);
+                })
+        };
+
+        defaultTasks.push(cloneTask);
+
+        if (is(flags.fetch)) {
+            const fetchTask: ListrOptions = {
+                title: 'Fetching refs',
+                enabled: ctx => ctx.cloneFailed !== true,
+                task: () =>
+                    execa('git', ['fetch'], { cwd: targetDir }).catch( error => {
                         throw new Error(error);
-                    }
-                })
-        };
+                    })
+            };
 
-        defaultTasks.push(cleanTask);
-    }
+            defaultTasks.push(fetchTask);
+        }
 
-    const cloneTask = {
-        title: 'Cloning repository',
-        task: (ctx, task) =>
-            execa('git', cloneArgs).catch( error => {
-                ctx.cloneFailed = true;
-                task.skip(error.Error);
-            })
-    };
+        if (is(flags.install)) {
+            const lookTask: ListrOptions = {
+                title: 'Looking for dependencies',
+                enabled: ctx => ctx.cloneFailed !== true,
+                task: () => {
+                    return new Listr([
+                        {
+                            title: 'Detecting .gitmodules',
+                            task: (ctx, task) =>
+                                existsAsync(join(targetDir, '.gitmodules')).then(result => {
+                                    ctx.gitmodules = result;
 
-    defaultTasks.push(cloneTask);
-
-    if (is(program.fetch)) {
-        const fetchTask: ListrOptions = {
-            title: 'Fetching refs',
-            enabled: ctx => ctx.cloneFailed !== true,
-            task: () =>
-                execa('git', ['fetch'], { cwd: targetDir }).catch( error => {
-                    throw new Error(error);
-                })
-        };
-
-        defaultTasks.push(fetchTask);
-    }
-
-    if (is(program.install)) {
-        const lookTask: ListrOptions = {
-            title: 'Looking for dependencies',
-            enabled: ctx => ctx.cloneFailed !== true,
-            task: () => {
-                return new Listr([
-                    {
-                        title: 'Detecting .gitmodules',
-                        task: (ctx, task) =>
-                            existsAsync(join(targetDir, '.gitmodules')).then(result => {
-                                ctx.gitmodules = result;
-
-                                if (result === false) {
-                                    task.skip('No .gitmodules found');
-                                }
-                            })
-                    },
-                    {
-                        title: 'Detecting package.json',
-                        task: (ctx, task) =>
-                            existsAsync(join(targetDir, 'package.json')).then(result => {
-                                ctx.npm = result;
-
-                                if (result === false) {
-                                    task.skip('No package.json found');
-                                }
-                            })
-                    },
-                    {
-                        title: 'Detecting bower.json',
-                        task: (ctx, task) =>
-                            existsAsync(join(targetDir, 'bower.json')).then(result => {
-                                ctx.bower = result;
-
-                                if (result === false) {
-                                    task.skip('No bower.json found');
-                                }
-                            })
-                    },
-                    {
-                        title: 'Detecting composer.json',
-                        task: (ctx, task) =>
-                            existsAsync(join(targetDir, dirName, 'composer.json')).then(result => {
-                                ctx.composer = result;
-
-                                if (result === false) {
-                                    task.skip('No composer.json found');
-                                }
-                            })
-                    },
-                    {
-                        title: 'Detecting Pipfile',
-                        task: (ctx, task) =>
-                            existsAsync(join(targetDir, dirName, 'Pipfile')).then(result => {
-                                ctx.pipenv = result;
-
-                                if (result === false) {
-                                    task.skip('No Pipfile found');
-                                }
-                            })
-                    },
-                    {
-                        title: 'Detecting Gemfile',
-                        task: (ctx, task) =>
-                            existsAsync(join(targetDir, dirName, 'Gemfile')).then(result => {
-                                ctx.bundler = result;
-
-                                if (result === false) {
-                                    task.skip('No Gemfile found');
-                                }
-                            })
-                    },
-                    {
-                        title: 'Detecting Gopkg.toml',
-                        task: (ctx, task) =>
-                            existsAsync(join(targetDir, dirName, 'Gopkg.toml')).then(result => {
-                                ctx.godep = result;
-
-                                if (result === false) {
-                                    task.skip('No Gopkg.toml found');
-                                }
-                            })
-                    },
-                    {
-                        title: 'Detecting pubspec.yaml',
-                        task: (ctx, task) =>
-                            existsAsync(join(targetDir, dirName, 'pubspec.yaml')).then(result => {
-                                ctx.flutter = result;
-
-                                if (result === false) {
-                                    task.skip('No pubspec.yaml found');
-                                }
-                            })
-                    }
-                ]);
-            }
-        };
-
-        const installTask: ListrOptions = {
-            title: 'Installing dependencies',
-            enabled: ctx => ctx.cloneFailed !== true && (ctx.gitmodules !== false || ctx.npm !== false || ctx.bower !== false || ctx.composer !== false),
-            task: () => {
-                return new Listr([
-                    {
-                        title: 'Git modules',
-                        enabled: ctx => ctx.gitmodules !== false,
-                        task: () => {
-                            return new Listr([
-                                {
-                                    title: 'Installing',
-                                    task: () =>
-                                        exec('git', ['submodule', 'update', '--init', '--recursive'], { cwd: targetDir }).pipe(
-                                            catchError(error => {
-                                                throwError(error);
-                                            })
-                                        )
-                                }
-                            ]);
-                        }
-                    },
-                    {
-                        title: 'Node packages',
-                        enabled: ctx => ctx.npm !== false,
-                        task: () => {
-                            return new Listr([
-                                {
-                                    title: 'Installing with Yarn',
-                                    enabled: ctx => ctx.npm === true,
-                                    task: (ctx, task) =>
-                                        exec('yarn', [], { cwd: targetDir }).pipe(
-                                            catchError(error => {
-                                                throwError(error);
-                                            })
-                                        )
-                                },
-                                {
-                                    title: 'Installing with npm',
-                                    enabled: ctx => ctx.npm === true && ctx.yarn === false,
-                                    task: () =>
-                                        exec('npm', ['install'], { cwd: targetDir }).pipe(
-                                            catchError(error => {
-                                                throwError(error);
-                                            })
-                                        )
-                                }
-                            ]);
-                        }
-                    },
-                    {
-                        title: 'Bower packages',
-                        enabled: ctx => ctx.bower !== false,
-                        task: () => {
-                            return new Listr([
-                                {
-                                    title: 'Installing',
-                                    task: () =>
-                                        exec('bower', ['install'], { cwd: targetDir }).pipe(
-                                            catchError(error => {
-                                                throwError(error);
-                                            })
-                                        )
-                                }
-                            ]);
-                        }
-                    },
-                    {
-                        title: 'Composer packages',
-                        enabled: ctx => ctx.composer !== false,
-                        task: () => {
-                            return new Listr([
-                                {
-                                    title: 'Installing',
-                                    task: () =>
-                                        exec('composer', ['install'], { cwd: targetDir }).pipe(
-                                            catchError(error => {
-                                                throwError(error);
-                                            })
-                                        )
-                                }
-                            ]);
-                        }
-                    },
-                    {
-                        title: 'Pip packages',
-                        enabled: ctx => ctx.pipenv !== false,
-                        task: () => {
-                            return new Listr([
-                                {
-                                    title: 'Installing',
-                                    task: () =>
-                                        exec('pipenv', ['install'], { cwd: targetDir }).pipe(
-                                            catchError(error => {
-                                                throwError(error);
-                                            })
-                                        )
-                                }
-                            ]);
-                        }
-                    },
-                    {
-                        title: 'Ruby gems',
-                        enabled: ctx => ctx.bundler !== false,
-                        task: () => {
-                            return new Listr([
-                                {
-                                    title: 'Installing',
-                                    task: () =>
-                                        exec('bundler', ['install'], { cwd: targetDir }).pipe(
-                                            catchError(error => {
-                                                throwError(error);
-                                            })
-                                        )
-                                }
-                            ]);
-                        }
-                    },
-                    {
-                        title: 'Go dependencies',
-                        enabled: ctx => ctx.godep !== false,
-                        task: () => {
-                            return new Listr([
-                                {
-                                    title: 'Installing',
-                                    task: () =>
-                                        exec('dep', ['ensure'], { cwd: targetDir }).pipe(
-                                            catchError(error => {
-                                                throwError(error);
-                                            })
-                                        )
-                                }
-                            ]);
-                        }
-                    },
-                    {
-                        title: 'Dart packages',
-                        enabled: ctx => ctx.flutter !== false,
-                        task: () => {
-                            return new Listr([
-                                {
-                                    title: 'Installing',
-                                    task: () =>
-                                        exec('flutter', ['packages', 'get'], { cwd: targetDir }).pipe(
-                                            catchError(error => {
-                                                throwError(error);
-                                            })
-                                        )
-                                }
-                            ]);
-                        }
-                    }
-                ]);
-            }
-        };
-
-        defaultTasks.push(lookTask, installTask);
-    }
-
-    if (is(program.test)) {
-        const testTask: ListrOptions = {
-            title: 'Running test script',
-            enabled: ctx => ctx.npm === true,
-            task: () => {
-                return new Listr([
-                    {
-                        title: 'yarn test',
-                        enabled: ctx => ctx.yarn !== false,
-                        task: () =>
-                            exec('yarn', ['test'], { cwd: targetDir }).pipe(
-                                catchError(error => {
-                                    throwError(error);
+                                    if (result === false) {
+                                        task.skip('No .gitmodules found');
+                                    }
                                 })
-                            )
-                    },
-                    {
-                        title: 'npm test',
-                        enabled: ctx => ctx.yarn === false,
-                        task: () =>
-                            exec('npm', ['test'], { cwd: targetDir }).pipe(
-                                catchError(error => {
-                                    throwError(error);
-                                })
-                            )
-                    }
-                ]);
-            }
-        };
+                        },
+                        {
+                            title: 'Detecting package.json',
+                            task: (ctx, task) =>
+                                existsAsync(join(targetDir, 'package.json')).then(result => {
+                                    ctx.npm = result;
 
-        defaultTasks.push(testTask);
-    }
-
-    if (is(program.run)) {
-        const runTask: ListrOptions = {
-            title: `Running ${program.run} script`,
-            enabled: ctx => ctx.npm === true,
-            task: () => {
-                return new Listr([
-                    {
-                        title: `yarn run ${program.run}`,
-                        enabled: ctx => ctx.yarn !== false,
-                        task: () =>
-                            exec('yarn', ['run', program.run], { cwd: targetDir }).pipe(
-                                catchError(error => {
-                                    throwError(error);
+                                    if (result === false) {
+                                        task.skip('No package.json found');
+                                    }
                                 })
-                            )
-                    },
-                    {
-                        title: `npm run ${program.run}`,
-                        enabled: ctx => ctx.yarn === false,
-                        task: () =>
-                            exec('npm', ['run', program.run], { cwd: targetDir }).pipe(
-                                catchError(error => {
-                                    throwError(error);
-                                })
-                            )
-                    }
-                ]);
-            }
-        };
+                        },
+                        {
+                            title: 'Detecting bower.json',
+                            task: (ctx, task) =>
+                                existsAsync(join(targetDir, 'bower.json')).then(result => {
+                                    ctx.bower = result;
 
-        defaultTasks.push(runTask);
-    }
-
-    if (is(program.start)) {
-        const startTask: ListrOptions = {
-            title: 'Running start script',
-            enabled: ctx => ctx.npm === true,
-            task: () => {
-                return new Listr([
-                    {
-                        title: 'yarn start',
-                        enabled: ctx => ctx.yarn !== false,
-                        task: () =>
-                            exec('yarn', ['start'], { cwd: targetDir }).pipe(
-                                catchError(error => {
-                                    throwError(error);
+                                    if (result === false) {
+                                        task.skip('No bower.json found');
+                                    }
                                 })
-                            )
-                    },
-                    {
-                        title: 'npm start',
-                        enabled: ctx => ctx.yarn === false,
-                        task: () =>
-                            exec('npm', ['start'], { cwd: targetDir }).pipe(
-                                catchError(error => {
-                                    throwError(error);
-                                })
-                            )
-                    }
-                ]);
-            }
-        };
+                        },
+                        {
+                            title: 'Detecting composer.json',
+                            task: (ctx, task) =>
+                                existsAsync(join(targetDir, dirName, 'composer.json')).then(result => {
+                                    ctx.composer = result;
 
-        defaultTasks.push(startTask);
-    }
+                                    if (result === false) {
+                                        task.skip('No composer.json found');
+                                    }
+                                })
+                        },
+                        {
+                            title: 'Detecting Pipfile',
+                            task: (ctx, task) =>
+                                existsAsync(join(targetDir, dirName, 'Pipfile')).then(result => {
+                                    ctx.pipenv = result;
+
+                                    if (result === false) {
+                                        task.skip('No Pipfile found');
+                                    }
+                                })
+                        },
+                        {
+                            title: 'Detecting Gemfile',
+                            task: (ctx, task) =>
+                                existsAsync(join(targetDir, dirName, 'Gemfile')).then(result => {
+                                    ctx.bundler = result;
+
+                                    if (result === false) {
+                                        task.skip('No Gemfile found');
+                                    }
+                                })
+                        },
+                        {
+                            title: 'Detecting Gopkg.toml',
+                            task: (ctx, task) =>
+                                existsAsync(join(targetDir, dirName, 'Gopkg.toml')).then(result => {
+                                    ctx.godep = result;
+
+                                    if (result === false) {
+                                        task.skip('No Gopkg.toml found');
+                                    }
+                                })
+                        },
+                        {
+                            title: 'Detecting pubspec.yaml',
+                            task: (ctx, task) =>
+                                existsAsync(join(targetDir, dirName, 'pubspec.yaml')).then(result => {
+                                    ctx.flutter = result;
+
+                                    if (result === false) {
+                                        task.skip('No pubspec.yaml found');
+                                    }
+                                })
+                        }
+                    ]);
+                }
+            };
+
+            const installTask: ListrOptions = {
+                title: 'Installing dependencies',
+                enabled: ctx => ctx.cloneFailed !== true && (ctx.gitmodules !== false || ctx.npm !== false || ctx.bower !== false || ctx.composer !== false),
+                task: () => {
+                    return new Listr([
+                        {
+                            title: 'Git modules',
+                            enabled: ctx => ctx.gitmodules !== false,
+                            task: () => {
+                                return new Listr([
+                                    {
+                                        title: 'Installing',
+                                        task: () =>
+                                            exec('git', ['submodule', 'update', '--init', '--recursive'], { cwd: targetDir }).pipe(
+                                                catchError(error => {
+                                                    throwError(error);
+                                                })
+                                            )
+                                    }
+                                ]);
+                            }
+                        },
+                        {
+                            title: 'Node packages',
+                            enabled: ctx => ctx.npm !== false,
+                            task: () => {
+                                return new Listr([
+                                    {
+                                        title: 'Installing with Yarn',
+                                        enabled: ctx => ctx.npm === true,
+                                        task: (ctx, task) =>
+                                            exec('yarn', [], { cwd: targetDir }).pipe(
+                                                catchError(error => {
+                                                    throwError(error);
+                                                })
+                                            )
+                                    },
+                                    {
+                                        title: 'Installing with npm',
+                                        enabled: ctx => ctx.npm === true && ctx.yarn === false,
+                                        task: () =>
+                                            exec('npm', ['install'], { cwd: targetDir }).pipe(
+                                                catchError(error => {
+                                                    throwError(error);
+                                                })
+                                            )
+                                    }
+                                ]);
+                            }
+                        },
+                        {
+                            title: 'Bower packages',
+                            enabled: ctx => ctx.bower !== false,
+                            task: () => {
+                                return new Listr([
+                                    {
+                                        title: 'Installing',
+                                        task: () =>
+                                            exec('bower', ['install'], { cwd: targetDir }).pipe(
+                                                catchError(error => {
+                                                    throwError(error);
+                                                })
+                                            )
+                                    }
+                                ]);
+                            }
+                        },
+                        {
+                            title: 'Composer packages',
+                            enabled: ctx => ctx.composer !== false,
+                            task: () => {
+                                return new Listr([
+                                    {
+                                        title: 'Installing',
+                                        task: () =>
+                                            exec('composer', ['install'], { cwd: targetDir }).pipe(
+                                                catchError(error => {
+                                                    throwError(error);
+                                                })
+                                            )
+                                    }
+                                ]);
+                            }
+                        },
+                        {
+                            title: 'Pip packages',
+                            enabled: ctx => ctx.pipenv !== false,
+                            task: () => {
+                                return new Listr([
+                                    {
+                                        title: 'Installing',
+                                        task: () =>
+                                            exec('pipenv', ['install'], { cwd: targetDir }).pipe(
+                                                catchError(error => {
+                                                    throwError(error);
+                                                })
+                                            )
+                                    }
+                                ]);
+                            }
+                        },
+                        {
+                            title: 'Ruby gems',
+                            enabled: ctx => ctx.bundler !== false,
+                            task: () => {
+                                return new Listr([
+                                    {
+                                        title: 'Installing',
+                                        task: () =>
+                                            exec('bundler', ['install'], { cwd: targetDir }).pipe(
+                                                catchError(error => {
+                                                    throwError(error);
+                                                })
+                                            )
+                                    }
+                                ]);
+                            }
+                        },
+                        {
+                            title: 'Go dependencies',
+                            enabled: ctx => ctx.godep !== false,
+                            task: () => {
+                                return new Listr([
+                                    {
+                                        title: 'Installing',
+                                        task: () =>
+                                            exec('dep', ['ensure'], { cwd: targetDir }).pipe(
+                                                catchError(error => {
+                                                    throwError(error);
+                                                })
+                                            )
+                                    }
+                                ]);
+                            }
+                        },
+                        {
+                            title: 'Dart packages',
+                            enabled: ctx => ctx.flutter !== false,
+                            task: () => {
+                                return new Listr([
+                                    {
+                                        title: 'Installing',
+                                        task: () =>
+                                            exec('flutter', ['packages', 'get'], { cwd: targetDir }).pipe(
+                                                catchError(error => {
+                                                    throwError(error);
+                                                })
+                                            )
+                                    }
+                                ]);
+                            }
+                        }
+                    ]);
+                }
+            };
+
+            defaultTasks.push(lookTask, installTask);
+        }
+
+        if (is(flags.test)) {
+            const testTask: ListrOptions = {
+                title: 'Running test script',
+                enabled: ctx => ctx.npm === true,
+                task: () => {
+                    return new Listr([
+                        {
+                            title: 'yarn test',
+                            enabled: ctx => ctx.yarn !== false,
+                            task: () =>
+                                exec('yarn', ['test'], { cwd: targetDir }).pipe(
+                                    catchError(error => {
+                                        throwError(error);
+                                    })
+                                )
+                        },
+                        {
+                            title: 'npm test',
+                            enabled: ctx => ctx.yarn === false,
+                            task: () =>
+                                exec('npm', ['test'], { cwd: targetDir }).pipe(
+                                    catchError(error => {
+                                        throwError(error);
+                                    })
+                                )
+                        }
+                    ]);
+                }
+            };
+
+            defaultTasks.push(testTask);
+        }
+
+        if (is(flags.run)) {
+            const runTask: ListrOptions = {
+                title: `Running ${flags.run} script`,
+                enabled: ctx => ctx.npm === true,
+                task: () => {
+                    return new Listr([
+                        {
+                            title: `yarn run ${flags.run}`,
+                            enabled: ctx => ctx.yarn !== false,
+                            task: () =>
+                                exec('yarn', ['run', flags.run], { cwd: targetDir }).pipe(
+                                    catchError(error => {
+                                        throwError(error);
+                                    })
+                                )
+                        },
+                        {
+                            title: `npm run ${flags.run}`,
+                            enabled: ctx => ctx.yarn === false,
+                            task: () =>
+                                exec('npm', ['run', flags.run], { cwd: targetDir }).pipe(
+                                    catchError(error => {
+                                        throwError(error);
+                                    })
+                                )
+                        }
+                    ]);
+                }
+            };
+
+            defaultTasks.push(runTask);
+        }
+
+        if (is(flags.start)) {
+            const startTask: ListrOptions = {
+                title: 'Running start script',
+                enabled: ctx => ctx.npm === true,
+                task: () => {
+                    return new Listr([
+                        {
+                            title: 'yarn start',
+                            enabled: ctx => ctx.yarn !== false,
+                            task: () =>
+                                exec('yarn', ['start'], { cwd: targetDir }).pipe(
+                                    catchError(error => {
+                                        throwError(error);
+                                    })
+                                )
+                        },
+                        {
+                            title: 'npm start',
+                            enabled: ctx => ctx.yarn === false,
+                            task: () =>
+                                exec('npm', ['start'], { cwd: targetDir }).pipe(
+                                    catchError(error => {
+                                        throwError(error);
+                                    })
+                                )
+                        }
+                    ]);
+                }
+            };
+
+            defaultTasks.push(startTask);
+        }
+    });
 
     tasks = new Listr(defaultTasks);
 
