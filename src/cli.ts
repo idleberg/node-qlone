@@ -5,8 +5,8 @@ const { version } = require('../package.json');
 program
     .version(version)
     .description('Clones repositories, installs dependencies, runs start scripts')
-    .arguments('<repository>')
-    .usage('<repository> [options]')
+    .arguments('<repositories>')
+    .usage('<repositories> [options]')
     .option('-b, --branch <branch>', 'specify git branch')
     .option('-d, --depth <int>', 'specify git commit depth', parseInt)
     .option('-f, --fetch', 'runs git fetch after clone')

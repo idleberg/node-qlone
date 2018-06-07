@@ -77,7 +77,7 @@ When providing the `--install` flag, the following dependencies will be installe
 Run `qlone --help` to list all available flags:
 
 ```
-  Usage: qlone <repository> [options]
+  Usage: qlone <repositories> [options]
 
   Clones repositories, installs dependencies, runs start scripts
 
