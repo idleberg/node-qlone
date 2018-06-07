@@ -26,7 +26,7 @@ var runTask = function (program) {
     var cloneArgs = ['clone'];
     repository = isRepository(repository);
     if (repository === '-1')
-        return console.error(logSymbols.error, 'Error: Unsupported repository format specified');
+        return console.error(logSymbols.error, "Error: Unsupported repository format specified: " + program.args[0]);
     cloneArgs.push(repository);
     if (is(program.branch)) {
         cloneArgs.push('--branch', program.branch);
@@ -38,16 +38,7 @@ var runTask = function (program) {
         cloneArgs.push(program.output);
     var dirName = is(program.output) ? program.output : basename(repository, '.git');
     var targetDir = join(process.cwd(), dirName);
-    var defaultTasks = [
-        {
-            title: 'Cloning repository',
-            task: function () {
-                return execa('git', cloneArgs).catch(function (error) {
-                    throw new Error(error);
-                });
-            }
-        }
-    ];
+    var defaultTasks = [];
     if (is(program.overwrite)) {
         var cleanTask = {
             title: 'Cleaning up',
@@ -59,11 +50,22 @@ var runTask = function (program) {
                 });
             }
         };
-        defaultTasks.unshift(cleanTask);
+        defaultTasks.push(cleanTask);
     }
+    var cloneTask = {
+        title: 'Cloning repository',
+        task: function (ctx, task) {
+            return execa('git', cloneArgs).catch(function (error) {
+                ctx.cloneFailed = true;
+                task.skip(error.Error);
+            });
+        }
+    };
+    defaultTasks.push(cloneTask);
     if (is(program.fetch)) {
         var fetchTask = {
             title: 'Fetching refs',
+            enabled: function (ctx) { return ctx.cloneFailed !== true; },
             task: function () {
                 return execa('git', ['fetch'], { cwd: targetDir }).catch(function (error) {
                     throw new Error(error);
@@ -75,6 +77,7 @@ var runTask = function (program) {
     if (is(program.install)) {
         var lookTask = {
             title: 'Looking for dependencies',
+            enabled: function (ctx) { return ctx.cloneFailed !== true; },
             task: function () {
                 return new Listr([
                     {
@@ -170,7 +173,7 @@ var runTask = function (program) {
         };
         var installTask = {
             title: 'Installing dependencies',
-            enabled: function (ctx) { return ctx.gitmodules !== false || ctx.npm !== false || ctx.bower !== false || ctx.composer !== false; },
+            enabled: function (ctx) { return ctx.cloneFailed !== true && (ctx.gitmodules !== false || ctx.npm !== false || ctx.bower !== false || ctx.composer !== false); },
             task: function () {
                 return new Listr([
                     {

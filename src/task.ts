@@ -30,7 +30,7 @@ const runTask = program => {
 
     repository = isRepository(repository);
 
-    if (repository === '-1') return console.error(logSymbols.error, 'Error: Unsupported repository format specified');
+    if (repository === '-1') return console.error(logSymbols.error, `Error: Unsupported repository format specified: ${program.args[0]}`);
 
     cloneArgs.push(repository);
 
@@ -44,15 +44,7 @@ const runTask = program => {
     const dirName: string = is(program.output) ? program.output : basename(repository, '.git');
     const targetDir: string = join(process.cwd(), dirName);
 
-    const defaultTasks = [
-        {
-            title: 'Cloning repository',
-            task: () =>
-                execa('git', cloneArgs).catch( error => {
-                    throw new Error(error);
-                })
-        }
-    ];
+    const defaultTasks = [];
 
     if (is(program.overwrite)) {
         const cleanTask = {
@@ -65,12 +57,24 @@ const runTask = program => {
                 })
         };
 
-        defaultTasks.unshift(cleanTask);
+        defaultTasks.push(cleanTask);
     }
+
+    const cloneTask = {
+        title: 'Cloning repository',
+        task: (ctx, task) =>
+            execa('git', cloneArgs).catch( error => {
+                ctx.cloneFailed = true;
+                task.skip(error.Error);
+            })
+    };
+
+    defaultTasks.push(cloneTask);
 
     if (is(program.fetch)) {
         const fetchTask: ListrOptions = {
             title: 'Fetching refs',
+            enabled: ctx => ctx.cloneFailed !== true,
             task: () =>
                 execa('git', ['fetch'], { cwd: targetDir }).catch( error => {
                     throw new Error(error);
@@ -83,6 +87,7 @@ const runTask = program => {
     if (is(program.install)) {
         const lookTask: ListrOptions = {
             title: 'Looking for dependencies',
+            enabled: ctx => ctx.cloneFailed !== true,
             task: () => {
                 return new Listr([
                     {
@@ -179,7 +184,7 @@ const runTask = program => {
 
         const installTask: ListrOptions = {
             title: 'Installing dependencies',
-            enabled: ctx => ctx.gitmodules !== false || ctx.npm !== false || ctx.bower !== false || ctx.composer !== false,
+            enabled: ctx => ctx.cloneFailed !== true && (ctx.gitmodules !== false || ctx.npm !== false || ctx.bower !== false || ctx.composer !== false),
             task: () => {
                 return new Listr([
                     {
