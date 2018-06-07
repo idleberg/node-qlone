@@ -24,28 +24,34 @@ const exec = (cmd, args = [], opts = {}) => {
 };
 
 const runTask = (repositories, flags) => {
-
-    const defaultTasks = [];
+    const defaultTasks: Array<Object> = [];
     let task, tasks;
 
     repositories.forEach( (repository, index) => {
+        let repositoryUrl = isRepository(repository);
+        if (repositoryUrl === '-1') return console.error(logSymbols.error, `Error: Unsupported repository format specified: ${repository}`);
+
         const cloneArgs: Array<string> = ['clone'];
+        let dirName: string;
+
         if (is(flags.branch)) {
             cloneArgs.push('--branch', flags.branch);
         }
+
         if (is(flags.depth)) {
             cloneArgs.push('--depth', flags.depth);
         }
-        if (is(flags.output) && flags.length === 1) cloneArgs.push(flags.output);
 
-        repository = isRepository(repository);
+        if (is(flags.output) && repositories.length === 1) {
+            dirName = flags.output;
+            cloneArgs.push(flags.output);
+        } else {
+            dirName = basename(repositoryUrl, '.git');
+        }
 
-        if (repository === '-1') return console.error(logSymbols.error, `Error: Unsupported repository format specified: ${repositories[index]}`);
-
-        cloneArgs.push(repository);
-
-        const dirName: string = is(flags.output) ? flags.output : basename(repository, '.git');
         const targetDir: string = join(process.cwd(), dirName);
+
+        cloneArgs.push(repositoryUrl);
 
         if (is(flags.overwrite)) {
             const cleanTask = {
@@ -62,7 +68,7 @@ const runTask = (repositories, flags) => {
         }
 
         const cloneTask = {
-            title: `Cloning repository ${repository}`,
+            title: `Cloning repository ${repositoryUrl}`,
             task: (ctx, task) =>
                 execa('git', cloneArgs).catch( error => {
                     ctx.cloneFailed = true;

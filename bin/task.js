@@ -24,21 +24,26 @@ var runTask = function (repositories, flags) {
     var defaultTasks = [];
     var task, tasks;
     repositories.forEach(function (repository, index) {
+        var repositoryUrl = isRepository(repository);
+        if (repositoryUrl === '-1')
+            return console.error(logSymbols.error, "Error: Unsupported repository format specified: " + repository);
         var cloneArgs = ['clone'];
+        var dirName;
         if (is(flags.branch)) {
             cloneArgs.push('--branch', flags.branch);
         }
         if (is(flags.depth)) {
             cloneArgs.push('--depth', flags.depth);
         }
-        if (is(flags.output) && flags.length === 1)
+        if (is(flags.output) && repositories.length === 1) {
+            dirName = flags.output;
             cloneArgs.push(flags.output);
-        repository = isRepository(repository);
-        if (repository === '-1')
-            return console.error(logSymbols.error, "Error: Unsupported repository format specified: " + repositories[index]);
-        cloneArgs.push(repository);
-        var dirName = is(flags.output) ? flags.output : basename(repository, '.git');
+        }
+        else {
+            dirName = basename(repositoryUrl, '.git');
+        }
         var targetDir = join(process.cwd(), dirName);
+        cloneArgs.push(repositoryUrl);
         if (is(flags.overwrite)) {
             var cleanTask = {
                 title: "Cleaning up " + dirName,
@@ -53,7 +58,7 @@ var runTask = function (repositories, flags) {
             defaultTasks.push(cleanTask);
         }
         var cloneTask = {
-            title: "Cloning repository " + repository,
+            title: "Cloning repository " + repositoryUrl,
             task: function (ctx, task) {
                 return execa('git', cloneArgs).catch(function (error) {
                     ctx.cloneFailed = true;
