@@ -22,7 +22,6 @@ var exec = function (cmd, args, opts) {
 };
 var runTask = function (repositories, flags) {
     var defaultTasks = [];
-    var task, tasks;
     repositories.forEach(function (repository, index) {
         var repositoryUrl = isRepository(repository);
         if (repositoryUrl === '-1')
@@ -43,6 +42,7 @@ var runTask = function (repositories, flags) {
             dirName = basename(repositoryUrl, '.git');
         }
         var targetDir = join(process.cwd(), dirName);
+        var ctx, task;
         cloneArgs.push(repositoryUrl);
         if (is(flags.overwrite)) {
             var cleanTask = {
@@ -412,7 +412,7 @@ var runTask = function (repositories, flags) {
             defaultTasks.push(startTask);
         }
     });
-    tasks = new Listr(defaultTasks);
+    var tasks = new Listr(defaultTasks);
     tasks.run().catch(function (err) {
         console.error(logSymbols.error, err);
     });

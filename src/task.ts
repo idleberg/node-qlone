@@ -25,7 +25,6 @@ const exec = (cmd, args = [], opts = {}) => {
 
 const runTask = (repositories, flags) => {
     const defaultTasks: Array<Object> = [];
-    let task, tasks;
 
     repositories.forEach( (repository, index) => {
         let repositoryUrl = isRepository(repository);
@@ -50,6 +49,7 @@ const runTask = (repositories, flags) => {
         }
 
         const targetDir: string = join(process.cwd(), dirName);
+        let ctx, task;
 
         cloneArgs.push(repositoryUrl);
 
@@ -448,7 +448,7 @@ const runTask = (repositories, flags) => {
         }
     });
 
-    tasks = new Listr(defaultTasks);
+    const tasks = new Listr(defaultTasks);
 
     tasks.run().catch(err => {
         console.error(logSymbols.error, err);
