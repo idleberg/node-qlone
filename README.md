@@ -13,7 +13,7 @@ CLI tool to clone repositories, install dependencies and run Node scripts. All i
 
 ## Usage
 
-Cloning repositories and getting it ready for development to use can be a tedious task. This is where `qlone` comes in. See these two examples:
+Cloning repositories and getting it ready for development use can be a tedious task. This is where `qlone` comes in. See these two examples:
 
 ```sh
 # Without qlone
