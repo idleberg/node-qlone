@@ -1,9 +1,9 @@
 # qlone
 
-[![npm](https://img.shields.io/npm/l/qlone.svg?style=flat-square)](https://www.npmjs.org/package/qlone)
-[![npm](https://img.shields.io/npm/v/qlone.svg?style=flat-square)](https://www.npmjs.org/package/qlone)
-[![David](https://img.shields.io/david/idleberg/node-qlone.svg?style=flat-square)](https://david-dm.org/idleberg/node-qlone)
-[![David](https://img.shields.io/david/dev/idleberg/node-qlone.svg?style=flat-square)](https://david-dm.org/idleberg/node-qlone?type=dev)
+[![npm](https://flat.badgen.net/npm/license/qlone)](https://www.npmjs.org/package/qlone)
+[![npm](https://flat.badgen.net/npm/v/qlone)](https://www.npmjs.org/package/qlone)
+[![David](https://flat.badgen.net/david/dep/idleberg/node-qlone)](https://david-dm.org/idleberg/node-qlone)
+[![David](https://flat.badgen.net/david/dev/idleberg/node-qlone)](https://david-dm.org/idleberg/node-qlone?type=dev)
 
 CLI tool to clone repositories, install dependencies and run Node scripts. All in one command.
 
