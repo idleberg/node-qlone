@@ -102,4 +102,4 @@ This work is licensed under [The MIT License](https://opensource.org/licenses/MI
 
 ## Donate
 
-You are welcome support this project using [Flattr](https://flattr.com/submit/auto?user_id=idleberg&url=https://github.com/idleberg/node-qlone) or Bitcoin `17CXJuPsmhuTzFV2k4RKYwpEHVjskJktRd`
+You are welcome to support this project using [Flattr](https://flattr.com/submit/auto?user_id=idleberg&url=https://github.com/idleberg/node-qlone) or Bitcoin `17CXJuPsmhuTzFV2k4RKYwpEHVjskJktRd`
