@@ -11,3 +11,7 @@ types/
 gulpfile.js
 tsconfig.json
 tslint.json
+
+# project specific
+bin/*.map
+todo.md
